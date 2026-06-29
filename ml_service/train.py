@@ -151,7 +151,9 @@ if __name__ == "__main__":
         "varianza_pca": float(
             pca.explained_variance_ratio_.sum()
         ),
-        "inercia": float(kmeans.inertia_)  
+        "inercia": float(kmeans.inertia_),          
+        "lista_inercias": [float(i) for i in inertias], 
+        "lista_k": list(range(2, 11))
         }
 
     with open("models/metricas.json", "w") as f:

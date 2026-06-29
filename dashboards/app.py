@@ -35,7 +35,7 @@ st.subheader("Métricas del modelo")
 st.markdown("En esta sección se presentan las métricas de evaluación del modelo, permitiendo entender la calidad de la segmentación realizada")
 
 #Muestra de las métricas del modelo
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4= st.columns(4)
 with col1:
     st.metric('K óptimo', metricas['k_optimo'])
 with col2:
@@ -43,7 +43,8 @@ with col2:
 with col3:
     st.metric('Varianza PCA', round(metricas['varianza_pca'],4))
 with col4:
-    st.metric('Inercia', round(metricas['inercia'], 2)) # <--- Nueva métrica
+    st.metric('Inercia', round(metricas['inercia'], 2))
+
 
 #Scatter plot de PCA con centroides
 st.subheader("Visualización de la segmentación de clientes con centroides")
