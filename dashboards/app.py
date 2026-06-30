@@ -133,7 +133,11 @@ st.plotly_chart(fig_heatmap)
 
 #Radar chart para comparar los centroides de los clusters
 st.subheader("Comparación de los centroides de los clusters")
-
+#Variables numéricas
+variables = [
+    col for col in clientes.select_dtypes(include=['float64', 'int64']).columns if col not in ['id_cliente','pc1', 'pc2', 'cluster']
+]
+variables_seleccionadas = st.multiselect("Selecciona las variables a incluir en el radar chart:", options = variables, default=[variables[0], variables[1], variables[2]])
 centroides['cluster'] = [str(i) for i in range(len(centroides))]
 #Preparación de los datos para el radar chart
 centroides_radar = centroides.set_index('cluster').T
@@ -158,10 +162,6 @@ st.plotly_chart(fig_radar)
 #Visualización interactiva de los datos de clientes mediante boxplots
 st.subheader("Visualización interactiva de los datos de clientes")
 st.markdown("En esta sección se presentan boxplots interactivos para analizar la distribución de las variables de los clientes por cluster.")
-#Variables numéricas para boxplots
-variables = [
-    col for col in clientes.select_dtypes(include=['float64', 'int64']).columns if col not in ['pc1', 'pc2', 'cluster']
-]
 
 variable = st.selectbox("Selecciona una variable para visualizar su distribución por cluster:", variables)
 #Creación del boxplot
