@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 import requests
-import plotly.express as px
 import plotly.graph_objects as go
+import plotly.express as px
 
 #Configuración inicial de la página
 st.set_page_config(
@@ -45,10 +45,29 @@ with col3:
 with col4:
     st.metric('Inercia', round(metricas['inercia'], 2))
 
+#Método del codo para determinar el número óptimo de clusters
+st.subheader("Método del codo")
+st.markdown("El método del codo es una técnica utilizada para determinar el número óptimo de clusters en un conjunto de datos.")
+k_values = metricas['lista_k'].iloc[0]
+inercia_values = metricas['lista_inercias'].iloc[0]
+fig_elbow = go.Figure()
+fig_elbow.add_trace(go.Scatter(
+    x=k_values,
+    y=inercia_values,
+    mode='lines+markers',
+    name='Inercia'
+))
+fig_elbow.update_layout(
+    title='Método del codo',
+    xaxis_title='Número de clusters (k)',
+    yaxis_title='Inercia',
+    margin=dict(l=0, r=0, t=30, b=0)
+)
+st.plotly_chart(fig_elbow)
 
 #Scatter plot de PCA con centroides
 st.subheader("Visualización de la segmentación de clientes con centroides")
-
+st.subheader("Gráfico para visualizar la segmentación de clientes, utilizando los componentes principales obtenidos del análisis de PCA.")
 fig_scatter = px.scatter(
     clientes,
     x='pc1',
@@ -57,11 +76,12 @@ fig_scatter = px.scatter(
     title='Visualización PCA de la segmentación de clientes',
     labels={'PCA1': 'Componente Principal 1', 'PCA2': 'Componente Principal 2', 'cluster': 'Cluster'}
 )
+#Centroides en el scatter plot
 fig_scatter.add_trace(go.Scatter(
-    #x=centroides['PCA1'], falta guardar estas variables en el endpoint de FastAPI
-    #y=centroides['PCA2'],
+    x=centroides['pc1'],
+    y=centroides['pc2'],
     mode='markers',
-    marker=dict(color='black', size=12, symbol='x'),
+    marker=dict(size=12, color='black', symbol='x'),
     name='Centroides'
 ))
 fig_scatter.update_traces(marker=dict(size=7), selector=dict(mode='markers'))
@@ -88,6 +108,79 @@ fig_bar.update_layout(
     margin=dict(l=0, r=0, t=30, b=0)
 )
 st.plotly_chart(fig_bar)
-#Falta por agregar: método del codo(gráfico), perfil de los clusters(heatmap), comparación de los centroides(radar chart), análisis de variables específicas por clúster (boxplot), análisis de la información
+
+#Muestra de los datos de métricas recibidos por Streamlit
 st.write("Datos de métricas recibidos por Streamlit:")
 st.json(metricas.to_dict()) # Esto mostrará el JSON en la pantalla
+
+#Heatmap con el perfil de los clusters
+st.subheader("Perfil de los clusters")
+#Creación de la tabla de perfil de clusters
+perfil_clusters = clientes.groupby('cluster').mean().reset_index()
+#Creación del heatmap
+fig_heatmap = px.imshow(
+    perfil_clusters.drop('cluster', axis=1).set_index(perfil_clusters['cluster']),
+    labels=dict(x="Variables", y="Cluster", color="Valor promedio"),
+    x=perfil_clusters.drop('cluster', axis=1).columns,
+    y=perfil_clusters['cluster'],
+    color_continuous_scale='Viridis'
+)
+fig_heatmap.update_layout(
+    title='Perfil de los clusters',
+    margin=dict(l=0, r=0, t=30, b=0)
+)
+st.plotly_chart(fig_heatmap)
+
+#Radar chart para comparar los centroides de los clusters
+st.subheader("Comparación de los centroides de los clusters")
+#Variables numéricas
+variables = [
+    col for col in clientes.select_dtypes(include=['float64', 'int64']).columns if col not in ['id_cliente','pc1', 'pc2', 'cluster']
+]
+variables_seleccionadas = st.multiselect("Selecciona las variables a incluir en el radar chart:", options = variables, default=[variables[:5]])
+if len(variables_seleccionadas) < 3:
+    st.warning("Por favor, selecciona al menos 3 variables para el radar chart.")
+    st.stop()
+
+centroides['cluster'] = [str(i) for i in range(len(centroides))]
+centroides_con_filtro = centroides[['cluster'] + variables_seleccionadas]
+#Preparación de los datos para el radar chart
+centroides_radar = centroides_con_filtro.set_index('cluster').T
+#Creación del radar chart
+fig_radar = go.Figure()
+for cluster in centroides_radar.columns:
+    fig_radar.add_trace(go.Scatterpolar(
+        r=centroides_radar[cluster].values,
+        theta=centroides_radar.index,
+        fill='toself',
+        name=f'Cluster {cluster}'
+    ))
+fig_radar.update_layout(
+    polar=dict(
+        radialaxis=dict(visible=True)
+    ),
+    title='Comparación de los centroides de los clusters',
+    margin=dict(l=0, r=0, t=30, b=0)
+)
+st.plotly_chart(fig_radar)
+
+#Visualización interactiva de los datos de clientes mediante boxplots
+st.subheader("Visualización interactiva de los datos de clientes")
+st.markdown("En esta sección se presentan boxplots interactivos para analizar la distribución de las variables de los clientes por cluster.")
+
+variable = st.selectbox("Selecciona una variable para visualizar su distribución por cluster:", variables)
+#Creación del boxplot
+fig_box = px.box(
+    clientes,
+    x='cluster',
+    y=variable,
+    color='cluster',
+    title=f'Distribución de {variable} por cluster',
+    labels={'cluster': 'Cluster', variable: variable}
+)
+fig_box.update_layout(
+    xaxis_title='Cluster',
+    yaxis_title=variable,
+    margin=dict(l=0, r=0, t=30, b=0)
+)
+st.plotly_chart(fig_box)
